@@ -57,7 +57,7 @@ public class LDAPRefServer {
         int port = 1389;
         if ( args.length < 1 || args[ 0 ].indexOf('#') < 0 ) {
             System.err.println(LDAPRefServer.class.getSimpleName() + " <codebase_url#classname> [<port>]"); //$NON-NLS-1$
-            System.exit(-1);
+            return;
         }
         else if ( args.length > 1 ) {
             port = Integer.parseInt(args[ 1 ]);

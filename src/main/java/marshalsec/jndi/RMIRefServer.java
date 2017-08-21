@@ -104,7 +104,6 @@ public class RMIRefServer implements Runnable {
         int port = 1099;
         if ( args.length < 1 || args[ 0 ].indexOf('#') < 0 ) {
             System.err.println(RMIRefServer.class.getName() + "<codebase_url#classname> [<port>]");
-            System.exit(-1);
             return;
         }
         if ( args.length >= 2 ) {
