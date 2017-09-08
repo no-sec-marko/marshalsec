@@ -1,5 +1,7 @@
 package marshalsec;
 
+import java.util.Map;
+
 /**
  * @author mawn
  * @version 1.0.0.
@@ -13,6 +15,12 @@ public class MarshalsecFactory {
 		this.configuration = configuration;
 	}
 
+	public Map payload(MarshallerBase marshal) throws Exception {
+
+		marshal.run(configuration);
+
+		return marshal.getPayload();
+	}
 
 
 }

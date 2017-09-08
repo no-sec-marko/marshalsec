@@ -25,11 +25,14 @@ package marshalsec;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import marshalsec.gadgets.Args;
 import marshalsec.gadgets.GadgetType;
 import marshalsec.gadgets.Primary;
@@ -71,7 +74,7 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 		this.payload = new HashMap<>();
 
 		if (configuration.isAll()) {
-			runAll(configuration.isTest(),
+			runAll(configuration, configuration.isTest(),
 				configuration.isVerbose(),
 				false,
 				configuration.getEscapeType());
@@ -142,7 +145,7 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 			this.payload = new HashMap<>();
 
 			if (all) {
-				runAll(test, verbose, false, escape);
+				runAll(null, test, verbose, false, escape);
 			} else {
 				String[] gadgetArgs = new String[args.length - argoff];
 				System.arraycopy(args, argoff, gadgetArgs, 0, args.length - argoff);
@@ -167,11 +170,12 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 
 
 	public void runTests() throws Exception {
-		runAll(true, false, true, EscapeType.NONE);
+		runAll(null, true, false, true, EscapeType.NONE);
 	}
 
 
-	private void runAll(boolean test, boolean verbose, boolean throwEx, EscapeType escape)
+	private void runAll(Configuration configuration, boolean test, boolean verbose, boolean throwEx,
+		EscapeType escape)
 		throws Exception {
 
 		for (GadgetType t : this.getSupportedTypes()) {
@@ -183,8 +187,25 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 			if (a.noTest()) {
 				continue;
 			}
+
 			String[] defaultArgs = a.defaultArgs();
-			doRun(t, test, verbose, throwEx, escape, defaultArgs);
+			List<String> args = new ArrayList<>();
+
+			// replace default args with configuration
+			if (configuration != null) {
+				Arrays.stream(defaultArgs).forEach(value -> {
+					Matcher m = Pattern.compile(".(\\w*):").matcher(value);
+
+					if (m.find()) {
+						String prefix = m.group(1);
+						String payload = configuration.getPayloadByPrefix(prefix);
+						args.add(payload);
+					}
+
+				});
+			}
+
+			doRun(t, test, verbose, throwEx, escape, args.stream().toArray(String[]::new));
 		}
 	}
 
@@ -217,7 +238,6 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 		}
 
 		if (!test || verbose) {
-			System.err.println();
 			writeOutput(marshal, escape, type);
 		}
 

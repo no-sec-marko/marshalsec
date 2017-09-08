@@ -4,7 +4,7 @@ import marshalsec.gadgets.GadgetType;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * @author barko
+ * @author marko
  * @version 1.0.0.
  * @date 21.08.2017
  */
@@ -85,6 +85,21 @@ public class Configuration {
 		return gadgetType;
 	}
 
+	public String getPayloadByPrefix(final String prefix) {
+		switch (prefix) {
+			case "codebase":
+				return getCodebase();
+			case "codebaseClass":
+				return getCodebaseClass();
+			case "jndiUrl":
+				return getJNDIUrl();
+			case "exec":
+				return getExecutable();
+			default:
+				return "";
+		}
+	}
+
 	public static ConfigurationBuilder create() {
 		return new ConfigurationBuilder();
 	}
@@ -122,7 +137,7 @@ public class Configuration {
 				throw new IllegalArgumentException("Codebase must not be Blank");
 			}
 
-			this.codebase = codebase;
+			this.codebase = String.format("{exploit.codebase:%s}", codebase);
 			return this;
 		}
 
@@ -131,7 +146,7 @@ public class Configuration {
 				throw new IllegalArgumentException("CodebaseClass must not be Blank");
 			}
 
-			this.codebaseClass = codebaseClass;
+			this.codebaseClass = String.format("{exploit.codebaseClass:%s}", codebaseClass);
 			return this;
 		}
 
@@ -140,7 +155,7 @@ public class Configuration {
 				throw new IllegalArgumentException("JNDIUrl must not be Blank");
 			}
 
-			this.JNDIUrl = JNDIUrl;
+			this.JNDIUrl = String.format("{exploit.jndiUrl:%s}", JNDIUrl);
 			return this;
 		}
 
@@ -149,7 +164,7 @@ public class Configuration {
 				throw new IllegalArgumentException("executable must not be Blank");
 			}
 
-			this.executable = executable;
+			this.executable = String.format("{exploit.exec:%s}", executable);
 			return this;
 		}
 
@@ -178,6 +193,4 @@ public class Configuration {
 			return this;
 		}
 	}
-
-
 }
