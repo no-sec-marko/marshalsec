@@ -33,8 +33,10 @@ import marshalsec.util.Reflections;
  */
 public interface UnicastRemoteObjectGadget extends Gadget {
 
-    @Args ( args = {
+    @Args ( minArgs = 1, args = {
         "port"
+    }, defaultArgs = {
+        "1099"
     }, noTest = true )
     default Object makeUnicastRemoteObject ( UtilFactory uf, String... args ) throws Exception {
         java.rmi.server.UnicastRemoteObject uro = Reflections.createWithoutConstructor(java.rmi.server.UnicastRemoteObject.class);

@@ -68,7 +68,7 @@ public class KryoAltStrategy extends Kryo implements Rome, SpringPartiallyCompar
     @Args ( minArgs = 1, args = {
         "cmd", "args..."
     }, defaultArgs = {
-        MarshallerBase.defaultExecutable
+        MarshallerBase.defaultExecutable, "/tmp/foo"
     } )
     @Override
     public Object makeBeanFactoryPointcutAdvisor ( UtilFactory uf, String[] args ) throws Exception {

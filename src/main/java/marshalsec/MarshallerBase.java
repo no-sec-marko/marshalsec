@@ -23,22 +23,25 @@ SOFTWARE.
 package marshalsec;
 
 
+import com.google.common.collect.ImmutableMap;
+import com.unboundid.util.args.ArgumentException;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map.Entry;
 import marshalsec.gadgets.Args;
 import marshalsec.gadgets.GadgetType;
 import marshalsec.gadgets.Primary;
 import marshalsec.gadgets.ToStringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import marshalsec.util.PayloadKey;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 
@@ -47,7 +50,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  */
 public abstract class MarshallerBase<T> implements UtilFactory {
 
-	private final static Logger logger = LoggerFactory.getLogger(MarshallerBase.class);
+	private static final Log logger = LogFactory.getLog(MarshallerBase.class);
 
 	public static final String defaultCodebase = "{exploit.codebase:http://localhost:8080/}";
 
@@ -176,36 +179,69 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 
 	private void runAll(Configuration configuration, boolean test, boolean verbose, boolean throwEx,
 		EscapeType escape)
-		throws Exception {
+		throws ArgumentException, Exception {
 
-		for (GadgetType t : this.getSupportedTypes()) {
+		GadgetType[] supportedTypes = this.getSupportedTypes();
+
+		for (GadgetType t : supportedTypes) {
 			Method tm = getTargetMethod(t);
 			Args a = tm.getAnnotation(Args.class);
 			if (a == null) {
 				throw new Exception("Missing Args in " + t);
 			}
-			if (a.noTest()) {
+
+			if (a.noTest() && configuration == null) {
+				continue;
+			}
+
+			if ((configuration != null)
+				&& (a.noTest() && !configuration.isAll())) {
 				continue;
 			}
 
 			String[] defaultArgs = a.defaultArgs();
-			List<String> args = new ArrayList<>();
 
 			// replace default args with configuration
 			if (configuration != null) {
-				Arrays.stream(defaultArgs).forEach(value -> {
-					Matcher m = Pattern.compile(".(\\w*):").matcher(value);
 
-					if (m.find()) {
-						String prefix = m.group(1);
-						String payload = configuration.getPayloadByPrefix(prefix);
-						args.add(payload);
+				String[] defaultKeys = a.args();
+
+				ImmutableMap.Builder<String, String> marshDefaults = new ImmutableMap.Builder<>();
+
+				for (int i = 0; i < defaultKeys.length; i++) {
+					marshDefaults.put(defaultKeys[i], defaultArgs[i]);
+				}
+				/*
+				Map<String, String> marshDefaults = IntStream.range(0, defaultKeys.length)
+					.boxed()
+					.collect(Collectors.toMap(i -> defaultKeys[i], i -> defaultArgs[i]));
+				*/
+				List<String> args = new ArrayList<>();
+
+				Map<PayloadKey, String> payloads = configuration.getPayloads();
+
+				for (Entry<String, String> defaultSet : marshDefaults.build().entrySet()) {
+
+					PayloadKey key = PayloadKey.fromString(defaultSet.getKey());
+
+					if (key == null) {
+						logger.error("Cannot find payload key. Set default value...");
+						args.add(defaultSet.getValue());
+						continue;
 					}
 
-				});
-			}
+					args.add(payloads.get(key));
 
-			doRun(t, test, verbose, throwEx, escape, args.stream().toArray(String[]::new));
+				}
+				try {
+					doRun(t, test, verbose, throwEx, escape, args.stream().toArray(String[]::new));
+				} catch (IndexOutOfBoundsException e) {
+					throw new ArgumentException("Passed command entries are invalide. ", e);
+				}
+
+			} else {
+				doRun(t, test, verbose, throwEx, escape, defaultArgs);
+			}
 		}
 	}
 
@@ -302,7 +338,7 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 		try {
 			s.assertRCE();
 		} catch (Exception e) {
-			logger.error("Failed to achieve RCE:", e.getMessage());
+			logger.error("Failed to achieve RCE:", e);
 			if (ex != null) {
 				logger.error("Throwable: ", ex);
 			}
@@ -333,15 +369,13 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 	 */
 	private void writeOutput(T data, EscapeType escape, GadgetType gadgetType) throws IOException {
 		if (data instanceof byte[]) {
-			System.out.write((byte[]) data);
+			this.payload.put(gadgetType, new String((byte[]) data, Charset.defaultCharset()));
 		} else if (data instanceof String) {
 			switch (escape) {
 				case JAVA:
-					System.out.println(escapeJavaString((String) data));
 					this.payload.put(gadgetType, escapeJavaString((String) data));
 					break;
 				default:
-					System.out.println((String) data);
 					this.payload.put(gadgetType, (String) data);
 			}
 		} else {
@@ -364,18 +398,18 @@ public abstract class MarshallerBase<T> implements UtilFactory {
 	 * @return
 	 * @throws Exception
 	 */
-	private Object createObject(GadgetType t, String[] args) throws Exception {
+	private Object createObject(GadgetType t, String[] args) throws ArgumentException, Exception {
 		Method m = getTargetMethod(t);
 
 		if (!t.getClazz().isAssignableFrom(this.getClass())) {
-			throw new Exception("Gadget not supported for this marshaller");
+			throw new ArgumentException("Gadget not supported for this marshaller");
 		}
 
 		Args a = m.getAnnotation(Args.class);
 
 		if (a != null) {
 			if (args.length < a.minArgs()) {
-				throw new Exception(
+				throw new ArgumentException(
 					String.format("Gadget %s requires %d arguments: %s", t, a.minArgs(),
 						Arrays.toString(a.args())));
 			}

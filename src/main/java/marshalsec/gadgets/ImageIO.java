@@ -42,7 +42,7 @@ public interface ImageIO extends Gadget {
     @Args ( minArgs = 1, args = {
         "cmd", "args..."
     }, defaultArgs = {
-        MarshallerBase.defaultExecutable
+        MarshallerBase.defaultExecutable, "/tmp/foo"
     } )
     @Primary
     default Object makeImageIO ( UtilFactory uf, String[] args ) throws Exception {

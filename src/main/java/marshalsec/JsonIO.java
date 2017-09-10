@@ -92,7 +92,7 @@ public class JsonIO extends MarshallerBase<String> implements UnicastRefGadget, 
     @Args ( minArgs = 1, args = {
         "cmd", "args..."
     }, defaultArgs = {
-        MarshallerBase.defaultExecutable
+        MarshallerBase.defaultExecutable, "/tmp/foo"
     } )
     @Override
     public Object makeBeanFactoryPointcutAdvisor ( UtilFactory uf, String[] args ) throws Exception {

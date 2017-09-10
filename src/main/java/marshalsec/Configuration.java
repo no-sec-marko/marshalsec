@@ -1,6 +1,10 @@
 package marshalsec;
 
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import marshalsec.gadgets.GadgetType;
+import marshalsec.util.PayloadKey;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -9,14 +13,6 @@ import org.apache.commons.lang3.StringUtils;
  * @date 21.08.2017
  */
 public class Configuration {
-
-	private String codebase;
-
-	private String codebaseClass;
-
-	private String JNDIUrl;
-
-	private String executable;
 
 	private EscapeType escapeType;
 
@@ -28,15 +24,27 @@ public class Configuration {
 
 	private GadgetType gadgetType;
 
+	private Map<PayloadKey, String> payloads = new HashMap<>();
+
 	private Configuration(ConfigurationBuilder builder) {
 
-		this.codebase = builder.codebase;
+		this.payloads.put(PayloadKey.CMD, builder.executable);
 
-		this.codebaseClass = builder.codebaseClass;
+		this.payloads.put(PayloadKey.ARGS, builder.execArgs);
 
-		this.JNDIUrl = builder.JNDIUrl;
+		this.payloads.put(PayloadKey.CODECLASS, builder.codebaseClass);
 
-		this.executable = builder.executable;
+		this.payloads.put(PayloadKey.JNDIURL, builder.JNDIUrl);
+
+		this.payloads.put(PayloadKey.CLASSNAME, builder.className);
+
+		this.payloads.put(PayloadKey.HOST, builder.host);
+
+		this.payloads.put(PayloadKey.PORT, builder.port);
+
+		this.payloads.put(PayloadKey.CODEBASE, builder.codebase);
+
+		this.payloads.put(PayloadKey.SERVICECODEBASE, builder.serviceCodeBase);
 
 		this.escapeType = builder.escapeType;
 
@@ -47,22 +55,6 @@ public class Configuration {
 		this.verbose = builder.verbose;
 
 		this.gadgetType = builder.gadgetType;
-	}
-
-	public String getCodebase() {
-		return codebase;
-	}
-
-	public String getCodebaseClass() {
-		return codebaseClass;
-	}
-
-	public String getJNDIUrl() {
-		return JNDIUrl;
-	}
-
-	public String getExecutable() {
-		return executable;
 	}
 
 	public EscapeType getEscapeType() {
@@ -85,19 +77,8 @@ public class Configuration {
 		return gadgetType;
 	}
 
-	public String getPayloadByPrefix(final String prefix) {
-		switch (prefix) {
-			case "codebase":
-				return getCodebase();
-			case "codebaseClass":
-				return getCodebaseClass();
-			case "jndiUrl":
-				return getJNDIUrl();
-			case "exec":
-				return getExecutable();
-			default:
-				return "";
-		}
+	public Map<PayloadKey, String> getPayloads() {
+		return payloads;
 	}
 
 	public static ConfigurationBuilder create() {
@@ -116,6 +97,16 @@ public class Configuration {
 		private String JNDIUrl = "{exploit.jndiUrl:ldap://localhost:1389/obj}";
 
 		private String executable = "{exploit.exec:/usr/bin/gedit}";
+
+		private String execArgs = "args...";
+
+		private String port = "1099";
+
+		private String host = "localhost";
+
+		private String serviceCodeBase = "{exploit.codebase:http://localhost:8080/}";
+
+		private String className = "{exploit.codebaseClass:Exploit}";
 
 		private EscapeType escapeType = EscapeType.NONE;
 
@@ -138,6 +129,9 @@ public class Configuration {
 			}
 
 			this.codebase = String.format("{exploit.codebase:%s}", codebase);
+
+			this.serviceCodeBase = String.format("{exploit.codebase:%s}", codebase);
+
 			return this;
 		}
 
@@ -147,24 +141,36 @@ public class Configuration {
 			}
 
 			this.codebaseClass = String.format("{exploit.codebaseClass:%s}", codebaseClass);
+
+			this.className = String.format("{exploit.codebaseClass:%s}", codebaseClass);
+
 			return this;
 		}
 
-		public ConfigurationBuilder JNDIUrl(String JNDIUrl) {
-			if (StringUtils.isBlank(JNDIUrl)) {
-				throw new IllegalArgumentException("JNDIUrl must not be Blank");
+		public ConfigurationBuilder JNDIUrl(URI JNDIUrl) {
+			if (JNDIUrl == null) {
+				throw new IllegalArgumentException("JNDIUrl must not be empty");
 			}
 
-			this.JNDIUrl = String.format("{exploit.jndiUrl:%s}", JNDIUrl);
+			this.JNDIUrl = String.format("{exploit.jndiUrl:%s}", JNDIUrl.toString());
+
+			if (JNDIUrl.getScheme().equals("rmi")) {
+				this.port = String.valueOf(JNDIUrl.getPort());
+				this.host = JNDIUrl.getHost() + JNDIUrl.getHost();
+			}
+
 			return this;
 		}
 
-		public ConfigurationBuilder executable(String executable) {
-			if (StringUtils.isBlank(executable)) {
-				throw new IllegalArgumentException("executable must not be Blank");
+		public ConfigurationBuilder executable(String executable, String args) {
+			if (StringUtils.isEmpty(executable) && args != null) {
+				throw new IllegalArgumentException("executable and args must not be empty");
 			}
 
 			this.executable = String.format("{exploit.exec:%s}", executable);
+
+			this.execArgs = String.format("{exploit.execargs:%s}", args);
+
 			return this;
 		}
 
